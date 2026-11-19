@@ -152,34 +152,29 @@ def parseToMap() -> dict[str, object]:
 
     return store
 
-def is_item(element):
-    """An item is a list [name, price]."""
-    return (
-        isinstance(element, list)
-        and len(element) == 2
-        and isinstance(element[0], str)
-        and isinstance(element[1], (int, float))
-    )
-
-
-def find_item(catalog, name):
-    """Traverse the catalog depth-first (DFS) and return [name, price], or None."""
-    if is_item(catalog):
-        if catalog[0].lower() == name.strip().lower():
-            return catalog
+def to_price(value):
+    """Convert a price stored as text ("1.20" or "1,20") to a number. Return None if it isn't one."""
+    try:
+        return float(str(value).strip().replace(",", "."))
+    except ValueError:
         return None
 
-    if isinstance(catalog, dict):
-        children = catalog.values()
-    elif isinstance(catalog, list):
-        children = catalog
-    else:
-        return None
 
-    for child in children:
-        found = find_item(child, name)
-        if found:
-            return found
+def find_item(store, name):
+    """
+    Traverse the store depth-first (DFS): department -> section -> item.
+    A leaf is a pair item_name: price. Return [name, price], or None if not found.
+    """
+    wanted = name.strip().lower()
+    for key, value in store.items():
+        if isinstance(value, dict):
+            found = find_item(value, name)
+            if found:
+                return found
+        elif key.strip().lower() == wanted:
+            price = to_price(value)
+            if price is not None:
+                return [key, price]
     return None
 
 
@@ -187,6 +182,8 @@ def add_item(cart, item):
     """Add the item [name, price] to the cart."""
     if item:
         cart.append(item)
+    else:
+        print("Item not found")
 
 
 def calculate_price(cart):
@@ -214,7 +211,7 @@ if __name__ == "__main__":
             case '1':
                 search(store)
             case '2':
-                cart: dict[str, str] = {}
+                cart: list[list] = []
                 while True:
                     wanted: str = input("What now? 1.Add item (write item name) 0. exit ")
                     match wanted:
@@ -222,7 +219,6 @@ if __name__ == "__main__":
                             break
                         case _:
                             item = find_item(store, wanted)
-                            print(item)
                             add_item(cart, item)
 
                 calculate_price(cart)
